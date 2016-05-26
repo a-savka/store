@@ -12,10 +12,13 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.13.4",
-    "mongoose": "^4.4.19"
+    "http-status": "^0.2.3",
+    "mongoose": "^4.4.19",
+    "wagner-core": "^0.2.0"
   },
   "devDependencies": {
     "gulp": "^3.9.1",
-    "mocha": "^2.5.3"
+    "mocha": "^2.5.3",
+    "superagent": "^2.0.0-alpha.3"
   }
 }
