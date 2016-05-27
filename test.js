@@ -1,5 +1,5 @@
 var assert = require('assert');
-var expres = require('express');
+var express = require('express');
 var superagent = require('superagent');
 var wagner = require('wagner-core');
 
@@ -14,7 +14,7 @@ describe('Category API', function() {
     app = express();
 
     var models = require('./models')(wagner);
-    app.use('/api/v1', require('./api')(wagner));
+    app.use(require('./api')(wagner));
 
     server = app.listen(3000);
 
@@ -71,7 +71,7 @@ describe('Category API', function() {
     Category.create(categories, function(error, categories) {
 
       assert.ifError(error);
-      var url = URL_ROOT + '/categories/parent/Electronics';
+      var url = URL_ROOT + '/category/parent/Electronics';
 
       superagent.get(url, function(error, res) {
 
@@ -79,7 +79,7 @@ describe('Category API', function() {
         var result;
 
         assert.doesNotThrow(function() {
-          result = JSON.parse(result);
+          result = JSON.parse(res.text);
         });
 
         assert.ok(result.categories);
