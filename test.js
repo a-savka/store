@@ -2,94 +2,390 @@ var assert = require('assert');
 var express = require('express');
 var superagent = require('superagent');
 var wagner = require('wagner-core');
+var status = require('http-status');
 
 var URL_ROOT = 'http://localhost:3000';
+var PRODUCT_ID = "000000000000000000000001";
 
-describe('Category API', function() {
+describe('API', function() {
 
-  var server;
-  var Category;
+  var models;
 
   before(function() {
-    app = express();
-
-    var models = require('./models')(wagner);
-    app.use(require('./api')(wagner));
-
-    server = app.listen(3000);
-
-    Category = models.Category;
+    models = require('./models')(wagner);
   });
 
+  describe('Category', function() {
 
-  after(function() {
-    server.close();
-  });
+    var server;
+    var Category;
 
-
-  beforeEach(function(done) {
-    Category.remove({}, function(error) {
-      assert.ifError(error);
-      done();
+    before(function() {
+      app = express();
+      app.use(require('./api')(wagner));
+      server = app.listen(3000);
+      Category = models.Category;
     });
+
+
+    after(function() {
+      server.close();
+    });
+
+
+    beforeEach(function(done) {
+      Category.remove({}, function(error) {
+        assert.ifError(error);
+        done();
+      });
+    });
+
+
+    it('can load a category by id', function(done) {
+
+      Category.create({ _id: 'Electronics' }, function(error, doc) {
+
+        assert.ifError(error);
+        var url = URL_ROOT + '/category/id/Electronics';
+
+        superagent.get(url, function(error, res) {
+          assert.ifError(error);
+          var result;
+
+          assert.doesNotThrow(function() {
+            result = JSON.parse(res.text);
+          });
+
+          assert.ok(result.category);
+          assert.equal(result.category._id, 'Electronics');
+          done();
+
+        });
+      });
+    });
+
+
+    it('can load all categories that have a certain parent', function(done) {
+
+      var categories = test_data.categories;
+
+      Category.create(categories, function(error, categories) {
+
+        assert.ifError(error);
+        var url = URL_ROOT + '/category/parent/Electronics';
+
+        superagent.get(url, function(error, res) {
+
+          assert.ifError(error);
+          var result;
+
+          assert.doesNotThrow(function() {
+            result = JSON.parse(res.text);
+          });
+
+          assert.ok(result.categories);
+          assert.equal(result.categories.length, 2);
+          assert.equal(result.categories[0]._id, 'Laptops');
+          assert.equal(result.categories[1]._id, 'Phones');
+          done();
+
+        });
+      });
+    });
+
   });
 
 
-  it('can load a category by id', function(done) {
+  describe('Product', function() {
 
-    Category.create({ _id: 'Electronics' }, function(error, doc) {
+    var server;
+    var Product;
+    var Category;
 
-      assert.ifError(error);
-      var url = URL_ROOT + '/category/id/Electronics';
+    before(function() {
+      app = express();
+      app.use(require('./api')(wagner));
+      server = app.listen(3000);
+      Product = models.Product;
+      Category = models.Category;
+    });
 
-      superagent.get(url, function(error, res) {
+
+    after(function() {
+      server.close();
+    });
+
+
+    beforeEach(function(done) {
+      Category.remove({}, function(error) {
         assert.ifError(error);
-        var result;
+        Product.remove({}, function(error) {
+          assert.ifError(error);
+          done();
+        })
+      });
+    });
 
-        assert.doesNotThrow(function() {
-          result = JSON.parse(res.text);
+
+    it('can load a product by id', function(done) {
+
+      var product = {
+        name: "LG G4",
+        _id: PRODUCT_ID,
+        price: {
+          amount: 300,
+          currency: "USD"
+        }
+      };
+
+      Product.create(product, function(error, doc) {
+
+        assert.ifError(error);
+        var url = URL_ROOT + '/product/id/' + PRODUCT_ID;
+
+        superagent.get(url, function(error, res) {
+          assert.ifError(error);
+          var result;
+
+          assert.doesNotThrow(function() {
+            result = JSON.parse(res.text);
+          });
+
+          assert.ok(result.product);
+          assert.equal(result.product._id, PRODUCT_ID);
+          assert.equal(result.product.name, 'LG G4');
+          done();
+
+        });
+      });
+    });
+
+
+    it('can load all products in a category with subcategories', function(done) {
+
+      var categories = test_data.categories;
+      var products = test_data.products;
+
+      Category.create(categories, function(error, categories) {
+
+        assert.ifError(error);
+        Product.create(products, function(error, products) {
+
+          assert.ifError(error);
+          var url = URL_ROOT + "/product/category/Electronics";
+
+          superagent.get(url, function(error, res) {
+            assert.ifError(error);
+            var result;
+            assert.doesNotThrow(function() {
+              result = JSON.parse(res.text);
+            });
+            assert.equal(result.products.length, 2);
+            assert.equal(result.products[0].name, "Asus Zenbook Prime");
+            assert.equal(result.products[1].name, "LG G4");
+
+            var url = URL_ROOT + "/product/category/Electronics?price=1";
+            superagent.get(url, function(error, res) {
+
+              assert.ifError(error);
+              var result;
+              assert.doesNotThrow(function() {
+                result = JSON.parse(res.text);
+              });
+
+              assert.equal(result.products.length, 2);
+              assert.equal(result.products[0].name, "LG G4");
+              assert.equal(result.products[1].name, "Asus Zenbook Prime");
+              done();
+
+            });
+          });
         });
 
-        assert.ok(result.category);
-        assert.equal(result.category._id, 'Electronics');
-        done();
 
       });
     });
+
   });
 
+  describe('User', function() {
 
-  it('can load all categories that have a certain parent', function(done) {
+    var server;
+    var Category;
+    var Product;
+    var User;
 
-    var categories = [
-      { _id: 'Electronics' },
-      { _id: 'Phones', parent: 'Electronics' },
-      { _id: 'Laptops', parent: 'Electronics' },
-      { _id: 'Bacon' }
-    ];
+    before(function() {
+      var app = express();
+      Category = models.Category;
+      Product = models.Product;
+      User = models.User;
 
-    Category.create(categories, function(error, categories) {
-
-      assert.ifError(error);
-      var url = URL_ROOT + '/category/parent/Electronics';
-
-      superagent.get(url, function(error, res) {
-
-        assert.ifError(error);
-        var result;
-
-        assert.doesNotThrow(function() {
-          result = JSON.parse(res.text);
+      app.use(function(req, res, next) {
+        User.findOne({}, function(error, user) {
+          assert.ifError(error);
+          req.user = user;
+          next();
         });
+      });
 
-        assert.ok(result.categories);
-        assert.equal(result.categories.length, 2);
-        assert.equal(result.categories[0]._id, 'Laptops');
-        assert.equal(result.categories[1]._id, 'Phones');
-        done();
+      app.use(require('./api')(wagner));
+      server = app.listen(3000);
+    });
 
+    after(function() {
+      server.close();
+    });
+
+    beforeEach(function(done) {
+      Category.remove({}, function(error) {
+        assert.ifError(error);
+        Product.remove({}, function(error) {
+          assert.ifError(error);
+          User.remove({}, function(error) {
+            assert.ifError(error);
+            done();
+          })
+        });
       });
     });
+
+    beforeEach(function(done) {
+
+      var categories = test_data.categories;
+      var products = test_data.products;
+      var users = test_data.users;
+
+      Category.create(categories, function(error) {
+        assert.ifError(error);
+        Product.create(products, function(error) {
+          assert.ifError(error);
+          User.create(users, function(error) {
+            assert.ifError(error);
+            done();
+          });
+        });
+      });
+
+    });
+
+
+    it("can save user's cart", function(done) {
+      var url = URL_ROOT + "/me/cart";
+      superagent.
+        put(url).
+        send({
+          data: {
+            cart: [{ product: PRODUCT_ID, quantity: 1 }]
+          }
+        }).
+        end(function(error, res) {
+          assert.ifError(error);
+          assert.equal(res.status, status.OK)
+          User.findOne({}, function(error, user) {
+            assert.ifError(error);
+            assert.equal(user.data.cart.length, 1);
+            assert.equal(user.data.cart[0].product, PRODUCT_ID);
+            assert.equal(user.data.cart[0].quantity, 1);
+            done();
+          });
+        });
+    });
+
+
+    it("can load user cart", function(done) {
+      var url = URL_ROOT + "/me";
+      User.findOne({}, function(error, user) {
+        assert.ifError(error);
+        user.data.cart = [{ product: PRODUCT_ID, quantity: 1 }];
+        user.save(function(error) {
+          assert.ifError(error);
+          superagent.get(url, function(error, res) {
+            assert.ifError(error);
+            var result;
+            assert.doesNotThrow(function() {
+              result = JSON.parse(res.text).user;
+            });
+            assert.equal(result.data.cart.length, 1);
+            assert.equal(result.data.cart[0].product.name, 'Asus Zenbook Prime');
+            assert.equal(result.data.cart[0].quantity, 1);
+            done();
+          });
+        });
+      });
+    });
+
+
+  });
+});
+
+
+
+
+describe("Object.keys", function() {
+
+  it("return object keys array", function() {
+
+    var obj = {
+      Category: "1",
+      Product: "2"
+    }
+
+    var keys = Object.keys(obj);
+    assert.equal(keys[0], "Category");
+    assert.equal(keys[1], "Product");
+
   });
 
 });
+
+
+var test_data = {
+
+  categories: [
+    { _id: 'Electronics' },
+    { _id: 'Phones', parent: 'Electronics' },
+    { _id: 'Laptops', parent: 'Electronics' },
+    { _id: 'Bacon' }
+  ],
+
+  products: [
+     {
+       name: "LG G4",
+       category: { _id: "Phones", ancestors: ["Electronics", "Phones"] },
+       price: {
+         amount: 300,
+         currency: "USD"
+       }
+     },
+     {
+       _id: PRODUCT_ID,
+       name: "Asus Zenbook Prime",
+       category: { _id: "Laptops", ancestors: ["Electronics", "Laptops"] },
+       price: {
+         amount: 2000,
+         currency: "USD"
+       }
+     },
+     {
+       name: "Flying Pigs Farm Pasture Raised Pork Bacon",
+       category: { _id: "Bacon", ancestors: ["Bacon"] },
+       price: {
+         amount: 20,
+         currency: "USD"
+       }
+     }
+  ],
+
+  users: [{
+    profile: {
+      username: 'vkarpov15',
+      picture: 'http://pbs.twimg.com/profile_images/550304223036854272/Wwmwuh2t.png'
+    },
+    data: {
+      oauth: 'invalid',
+      cart: []
+    }
+  }]
+
+};
