@@ -1,5 +1,8 @@
 var express = require('express');
 var wagner = require('wagner-core');
+var env = require('node-env-file');
+
+env(__dirname + '/.env', { overwrite: true });
 
 require('./models')(wagner);
 

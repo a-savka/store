@@ -4,8 +4,13 @@ var superagent = require('superagent');
 var wagner = require('wagner-core');
 var status = require('http-status');
 
+var env = require('node-env-file');
+env(__dirname + '/.env', { overwrite: true });
+
 var URL_ROOT = 'http://localhost:3000';
 var PRODUCT_ID = "000000000000000000000001";
+
+
 
 describe('API', function() {
 
@@ -337,6 +342,12 @@ describe("Object.keys", function() {
 
   });
 
+});
+
+describe("Env", function() {
+  it("is working", function() {
+    assert.equal(process.env.FOO, "bar");
+  });
 });
 
 
