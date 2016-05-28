@@ -5,6 +5,8 @@ var env = require('node-env-file');
 env(__dirname + '/.env', { overwrite: true });
 
 require('./models')(wagner);
+require('./dependencies')(wagner);
+
 var app = express();
 
 wagner.invoke(require('./auth'), { app: app });
