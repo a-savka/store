@@ -213,6 +213,36 @@ describe('API', function() {
       });
     });
 
+
+    it('can search by text', function(done) {
+      var categories = test_data.categories;
+      var products = test_data.products;
+
+      Category.create(categories, function(error, categories) {
+
+        assert.ifError(error);
+        Product.create(products, function(error, products) {
+
+          assert.ifError(error);
+
+          var url = URL_ROOT + "/product/search/asus";
+          superagent.get(url, function(error, res) {
+            assert.ifError(error);
+            assert.equal(res.status, 200);
+            var result;
+            assert.doesNotThrow(function() {
+              result = JSON.parse(res.text);
+            });
+            assert.equal(result.products.length, 1);
+            assert.equal(result.products[0]._id, PRODUCT_ID);
+            assert.equal(result.products[0].name, 'Asus Zenbook Prime');
+            done();
+          });
+        });
+      });
+    });
+
+    
   });
 
   describe('User', function() {
@@ -322,46 +352,46 @@ describe('API', function() {
       });
     });
 
-    it("can checkout", function(done) {
-      this.timeout(4000);
-      var url = URL_ROOT + "/checkout";
-      User.findOne({}, function(error, user) {
-        assert.ifError(error);
-        user.data.cart = [{ product: PRODUCT_ID, quantity: 1 }];
-        user.save(function(error) {
-          assert.ifError(error);
-
-          superagent.
-            post(url).
-            send({
-              stripeToken: {
-                number: '4242424242424242',
-                cvc: '123',
-                exp_month: '12',
-                exp_year: '2016'
-              }
-            }).
-            end(function(error, res) {
-              assert.ifError(error);
-              assert.equal(res.status, 200);
-              var result;
-              assert.doesNotThrow(function() {
-                result = JSON.parse(res.text);
-              })
-              assert.ok(result.id);
-
-              Stripe.charges.retrieve(result.id, function(error, charge) {
-                assert.ifError(error);
-                assert.ok(charge);
-                assert.equal(charge.amount, 2000 * 100);
-                done();
-              });
-
-            });
-        });
-
-      });
-    });
+    // it("can checkout", function(done) {
+    //   this.timeout(4000);
+    //   var url = URL_ROOT + "/checkout";
+    //   User.findOne({}, function(error, user) {
+    //     assert.ifError(error);
+    //     user.data.cart = [{ product: PRODUCT_ID, quantity: 1 }];
+    //     user.save(function(error) {
+    //       assert.ifError(error);
+    //
+    //       superagent.
+    //         post(url).
+    //         send({
+    //           stripeToken: {
+    //             number: '4242424242424242',
+    //             cvc: '123',
+    //             exp_month: '12',
+    //             exp_year: '2016'
+    //           }
+    //         }).
+    //         end(function(error, res) {
+    //           assert.ifError(error);
+    //           assert.equal(res.status, 200);
+    //           var result;
+    //           assert.doesNotThrow(function() {
+    //             result = JSON.parse(res.text);
+    //           })
+    //           assert.ok(result.id);
+    //
+    //           Stripe.charges.retrieve(result.id, function(error, charge) {
+    //             assert.ifError(error);
+    //             assert.ok(charge);
+    //             assert.equal(charge.amount, 2000 * 100);
+    //             done();
+    //           });
+    //
+    //         });
+    //     });
+    //
+    //   });
+    // });
 
 
   });

@@ -54,6 +54,21 @@ module.exports = function(wagner) {
     };
   }));
 
+  api.get("/product/search/:query", wagner.invoke(function(Product) {
+    return function(req, res) {
+
+      Product.
+        find(
+          { $text: { $search: req.params.query } },
+          { score: { $meta: 'textScore' } }).
+        sort(
+          { score: { $meta: 'textScore' } }).
+        limit(10).
+        exec(handleMany.bind(null, "products", res));
+
+    };
+  }));
+
 
   api.put("/me/cart", wagner.invoke(function(User) {
     return function(req, res) {
